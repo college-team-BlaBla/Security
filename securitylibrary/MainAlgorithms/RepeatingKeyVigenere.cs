@@ -9,32 +9,25 @@ namespace SecurityLibrary
         {
             char[,] arr = new char[26, 26];
 
-            // Two for loops to generate the grid
             for (int i = 0; i < 26; i++)
             {
                 for (int j = 0; j < 26; j++)
                 {
 
-                    // Creates an int that will later be cast to a char
                     int let = i + j;
 
-                    // Keeps the int from getting too big
                     if (let >= 26)
                         let = let - 26;
 
-                    // Add 65 to the int so that the char will return letters and not ASCII symbols
                     let = let + 97;
 
-                    // Cast the int to a char
                     char letter = (char)let;
 
-                    // Put the char into its respective place in the array
                     arr[i, j] = letter;
 
                 }
             }
 
-            // Returns the grid
             return arr;
         }
         public string Analyse(string plainText, string cipherText)
@@ -86,7 +79,6 @@ namespace SecurityLibrary
 
         public string Decrypt(string cipherText, string key)
         {
-            //throw new NotImplementedException();
             char[,] shiftletters = genArray();
             Dictionary<char, int> D = new Dictionary<char, int>();
             int a = 0;
@@ -117,7 +109,6 @@ namespace SecurityLibrary
 
         public string Encrypt(string plainText, string key)
         {
-            //throw new NotImplementedException();
             char[,] shiftletters = genArray();
             Dictionary<char, int> D = new Dictionary<char, int>();
             int a = 0;
