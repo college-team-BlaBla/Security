@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text;
 namespace SecurityLibrary.AES
 {
     /// <summary>
@@ -26,6 +27,9 @@ namespace SecurityLibrary.AES
 
         public Aes_help()
         {
+            BuildSbox();
+            BuildInvSbox();
+            BuildRcon();
 
         }  // Aes constructor
 
@@ -394,6 +398,14 @@ namespace SecurityLibrary.AES
             return Enumerable.Range(0, hex.Length / 2).Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16)).ToArray();
         }
 
+        public static string ByteArrayToString(byte[] byteArray)
+        {
+            var hex = new StringBuilder(byteArray.Length * 2);
+            foreach (var b in byteArray)
+                hex.AppendFormat("{0:x2}", b);
+            return hex.ToString();
+        }
+
         public override string Encrypt(string plainText, string key)
         {
             //throw new NotImplementedException();
@@ -405,8 +417,12 @@ namespace SecurityLibrary.AES
             key2 = StringToByteArray(key.Substring(2, key.Length - 2));
             Aes_help a = new Aes_help();
             a.Cipher(plainText2, output, key2);
-            string out_final = System.Text.Encoding.Unicode.GetString(output);
-            return "0x" + out_final;
+
+
+            string temp_x = "0x";
+            temp_x += ByteArrayToString(output);
+
+            return temp_x;
         }
     }
 }
