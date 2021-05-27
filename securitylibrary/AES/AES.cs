@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Linq;
 namespace SecurityLibrary.AES
 {
     /// <summary>
@@ -9,101 +9,101 @@ namespace SecurityLibrary.AES
 
     //namespace AesLib
     //{
-        public class Aes_help  // Advanced Encryption Standard
+    public class Aes_help  // Advanced Encryption Standard
+    {
+        // key size, in bits, for construtor
+
+        private int Nb = 4;         // block size in 32-bit words.  Always 4 for AES.  (128 bits).
+                                    // key size in 32-bit words.  4, 6, 8.  (128, 192, 256 bits).
+                                    // number of rounds. 10, 12, 14.
+
+        private byte[] key;     // the seed key. size will be 4 * keySize from ctor.
+        private byte[,] Sbox;   // Substitution box
+        private byte[,] iSbox;  // inverse Substitution box
+                                //private byte[,] w;      // key schedule array.
+        private byte[,] Rcon;   // Round constants.
+        private byte[,] State;  // State matrix
+
+        public Aes_help()
         {
-             // key size, in bits, for construtor
 
-            private int Nb =4;         // block size in 32-bit words.  Always 4 for AES.  (128 bits).
-            // key size in 32-bit words.  4, 6, 8.  (128, 192, 256 bits).
-                  // number of rounds. 10, 12, 14.
+        }  // Aes constructor
 
-            private byte[] key;     // the seed key. size will be 4 * keySize from ctor.
-            private byte[,] Sbox;   // Substitution box
-            private byte[,] iSbox;  // inverse Substitution box
-            //private byte[,] w;      // key schedule array.
-            private byte[,] Rcon;   // Round constants.
-            private byte[,] State;  // State matrix
-
-            public Aes_help()
+        public void Cipher(byte[] input, byte[] output, byte[] key)  // encipher 16-bit input
+        {
+            this.State = new byte[4, Nb];  // always [4,4]
+            for (int i = 0; i < (4 * Nb); ++i)
             {
+                this.State[i % 4, i / 4] = input[i];
+            }
 
-            }  // Aes constructor
-
-            public void Cipher(byte[] input, byte[] output, byte[] key)  // encipher 16-bit input
+            byte[,] key2 = new byte[4, Nb];  // always [4,4]
+            for (int i = 0; i < (4 * Nb); ++i)
             {
-                this.State = new byte[4, Nb];  // always [4,4]
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    this.State[i % 4, i / 4] = input[i];
-                }
+                key2[i % 4, i / 4] = key[i];
+            }
 
-                byte[,] key2  = new byte[4, Nb];  // always [4,4]
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    key2[i % 4, i / 4] = key[i];
-                }
+            AddRoundKey(key2);
 
-                AddRoundKey(key2);
-
-                for (int round = 0; round <9; ++round)  // main round loop
-                {
-                    SubBytes();
-                    ShiftRows();
-                    MixColumns();
-                    AddRoundKey(key2);
-                }  // main round loop
-
+            for (int round = 0; round < 9; ++round)  // main round loop
+            {
                 SubBytes();
                 ShiftRows();
+                MixColumns();
                 AddRoundKey(key2);
+            }  // main round loop
 
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    output[i] = this.State[i % 4, i / 4];
-                }
-                
-            }  // Cipher()
+            SubBytes();
+            ShiftRows();
+            AddRoundKey(key2);
 
-            public void InvCipher(byte[] input, byte[] output, byte[] key)  // decipher 16-bit input
+            for (int i = 0; i < (4 * Nb); ++i)
             {
-                this.State = new byte[4, Nb];  // always [4,4]
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    this.State[i % 4, i / 4] = input[i];
-                }
+                output[i] = this.State[i % 4, i / 4];
+            }
 
-                byte[,] key2 = new byte[4, Nb];  // always [4,4]
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    key2[i % 4, i / 4] = key[i];
-                }
+        }  // Cipher()
 
-                AddRoundKey(key2);
+        public void InvCipher(byte[] input, byte[] output, byte[] key)  // decipher 16-bit input
+        {
+            this.State = new byte[4, Nb];  // always [4,4]
+            for (int i = 0; i < (4 * Nb); ++i)
+            {
+                this.State[i % 4, i / 4] = input[i];
+            }
 
-                for (int round = 8; round >= 0; --round)  // main round loop
-                {
-                    InvShiftRows();
-                    InvSubBytes();
-                    AddRoundKey(key2);
-                    InvMixColumns();
-                }  // end main round loop for InvCipher
+            byte[,] key2 = new byte[4, Nb];  // always [4,4]
+            for (int i = 0; i < (4 * Nb); ++i)
+            {
+                key2[i % 4, i / 4] = key[i];
+            }
 
+            AddRoundKey(key2);
+
+            for (int round = 8; round >= 0; --round)  // main round loop
+            {
                 InvShiftRows();
                 InvSubBytes();
                 AddRoundKey(key2);
+                InvMixColumns();
+            }  // end main round loop for InvCipher
 
-                for (int i = 0; i < (4 * Nb); ++i)
-                {
-                    output[i] = this.State[i % 4, i / 4];
-                }
+            InvShiftRows();
+            InvSubBytes();
+            AddRoundKey(key2);
 
-            }  // InvCipher()
-
-           
-
-            private void BuildSbox()
+            for (int i = 0; i < (4 * Nb); ++i)
             {
-                this.Sbox = new byte[16, 16] {  // populate the Sbox matrix
+                output[i] = this.State[i % 4, i / 4];
+            }
+
+        }  // InvCipher()
+
+
+
+        private void BuildSbox()
+        {
+            this.Sbox = new byte[16, 16] {  // populate the Sbox matrix
     /* 0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f */
     /*0*/  {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76},
     /*1*/  {0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0},
@@ -122,11 +122,11 @@ namespace SecurityLibrary.AES
     /*e*/  {0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf},
     /*f*/  {0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16} };
 
-            }  // BuildSbox()
+        }  // BuildSbox()
 
-            private void BuildInvSbox()
-            {
-                this.iSbox = new byte[16, 16] {  // populate the iSbox matrix
+        private void BuildInvSbox()
+        {
+            this.iSbox = new byte[16, 16] {  // populate the iSbox matrix
     /* 0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f */
     /*0*/  {0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb},
     /*1*/  {0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb},
@@ -145,11 +145,11 @@ namespace SecurityLibrary.AES
     /*e*/  {0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61},
     /*f*/  {0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d} };
 
-            }  // BuildInvSbox()
+        }  // BuildInvSbox()
 
-            private void BuildRcon()
-            {
-                this.Rcon = new byte[11, 4] { {0x00, 0x00, 0x00, 0x00}, 
+        private void BuildRcon()
+        {
+            this.Rcon = new byte[11, 4] { {0x00, 0x00, 0x00, 0x00},
                                    {0x01, 0x00, 0x00, 0x00},
                                    {0x02, 0x00, 0x00, 0x00},
                                    {0x04, 0x00, 0x00, 0x00},
@@ -160,232 +160,238 @@ namespace SecurityLibrary.AES
                                    {0x80, 0x00, 0x00, 0x00},
                                    {0x1b, 0x00, 0x00, 0x00},
                                    {0x36, 0x00, 0x00, 0x00} };
-            }  // BuildRcon()
+        }  // BuildRcon()
 
-            private void AddRoundKey(byte[,] key)
+        private void AddRoundKey(byte[,] key)
+        {
+
+            for (int r = 0; r < 4; ++r)
             {
-
-                for (int r = 0; r < 4; ++r)
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        this.State[r, c] = (byte)((int)this.State[r, c] ^ (int)key[ r, c]);
-                    }
-                }
-            }  // AddRoundKey()
-
-            private void SubBytes()
-            {
-                for (int r = 0; r < 4; ++r)
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        this.State[r, c] = this.Sbox[(this.State[r, c] >> 4), (this.State[r, c] & 0x0f)];
-                    }
-                }
-            }  // SubBytes
-
-            private void InvSubBytes()
-            {
-                for (int r = 0; r < 4; ++r)
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        this.State[r, c] = this.iSbox[(this.State[r, c] >> 4), (this.State[r, c] & 0x0f)];
-                    }
-                }
-            }  // InvSubBytes
-
-            private void ShiftRows()
-            {
-                byte[,] temp = new byte[4, 4];
-                for (int r = 0; r < 4; ++r)  // copy State into temp[]
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        temp[r, c] = this.State[r, c];
-                    }
-                }
-
-                for (int r = 1; r < 4; ++r)  // shift temp into State
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        this.State[r, c] = temp[r, (c + r) % Nb];
-                    }
-                }
-            }  // ShiftRows()
-
-            private void InvShiftRows()
-            {
-                byte[,] temp = new byte[4, 4];
-                for (int r = 0; r < 4; ++r)  // copy State into temp[]
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        temp[r, c] = this.State[r, c];
-                    }
-                }
-                for (int r = 1; r < 4; ++r)  // shift temp into State
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        this.State[r, (c + r) % Nb] = temp[r, c];
-                    }
-                }
-            }  // InvShiftRows()
-
-            private void MixColumns()
-            {
-                byte[,] temp = new byte[4, 4];
-                for (int r = 0; r < 4; ++r)  // copy State into temp[]
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        temp[r, c] = this.State[r, c];
-                    }
-                }
-
                 for (int c = 0; c < 4; ++c)
                 {
-                    this.State[0, c] = (byte)((int)gfmultby02(temp[0, c]) ^ (int)gfmultby03(temp[1, c]) ^
-                                               (int)gfmultby01(temp[2, c]) ^ (int)gfmultby01(temp[3, c]));
-                    this.State[1, c] = (byte)((int)gfmultby01(temp[0, c]) ^ (int)gfmultby02(temp[1, c]) ^
-                                               (int)gfmultby03(temp[2, c]) ^ (int)gfmultby01(temp[3, c]));
-                    this.State[2, c] = (byte)((int)gfmultby01(temp[0, c]) ^ (int)gfmultby01(temp[1, c]) ^
-                                               (int)gfmultby02(temp[2, c]) ^ (int)gfmultby03(temp[3, c]));
-                    this.State[3, c] = (byte)((int)gfmultby03(temp[0, c]) ^ (int)gfmultby01(temp[1, c]) ^
-                                               (int)gfmultby01(temp[2, c]) ^ (int)gfmultby02(temp[3, c]));
+                    this.State[r, c] = (byte)((int)this.State[r, c] ^ (int)key[r, c]);
                 }
-            }  // MixColumns
+            }
+        }  // AddRoundKey()
 
-            private void InvMixColumns()
+        private void SubBytes()
+        {
+            for (int r = 0; r < 4; ++r)
             {
-                byte[,] temp = new byte[4, 4];
-                for (int r = 0; r < 4; ++r)  // copy State into temp[]
-                {
-                    for (int c = 0; c < 4; ++c)
-                    {
-                        temp[r, c] = this.State[r, c];
-                    }
-                }
-
                 for (int c = 0; c < 4; ++c)
                 {
-                    this.State[0, c] = (byte)((int)gfmultby0e(temp[0, c]) ^ (int)gfmultby0b(temp[1, c]) ^
-                                               (int)gfmultby0d(temp[2, c]) ^ (int)gfmultby09(temp[3, c]));
-                    this.State[1, c] = (byte)((int)gfmultby09(temp[0, c]) ^ (int)gfmultby0e(temp[1, c]) ^
-                                               (int)gfmultby0b(temp[2, c]) ^ (int)gfmultby0d(temp[3, c]));
-                    this.State[2, c] = (byte)((int)gfmultby0d(temp[0, c]) ^ (int)gfmultby09(temp[1, c]) ^
-                                               (int)gfmultby0e(temp[2, c]) ^ (int)gfmultby0b(temp[3, c]));
-                    this.State[3, c] = (byte)((int)gfmultby0b(temp[0, c]) ^ (int)gfmultby0d(temp[1, c]) ^
-                                               (int)gfmultby09(temp[2, c]) ^ (int)gfmultby0e(temp[3, c]));
+                    this.State[r, c] = this.Sbox[(this.State[r, c] >> 4), (this.State[r, c] & 0x0f)];
                 }
-            }  // InvMixColumns
-
-            private static byte gfmultby01(byte b)
-            {
-                return b;
             }
+        }  // SubBytes
 
-            private static byte gfmultby02(byte b)
+        private void InvSubBytes()
+        {
+            for (int r = 0; r < 4; ++r)
             {
-                if (b < 0x80)
-                    return (byte)(int)(b << 1);
-                else
-                    return (byte)((int)(b << 1) ^ (int)(0x1b));
-            }
-
-            private static byte gfmultby03(byte b)
-            {
-                return (byte)((int)gfmultby02(b) ^ (int)b);
-            }
-
-            private static byte gfmultby09(byte b)
-            {
-                return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
-                               (int)b);
-            }
-
-            private static byte gfmultby0b(byte b)
-            {
-                return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
-                               (int)gfmultby02(b) ^
-                               (int)b);
-            }
-
-            private static byte gfmultby0d(byte b)
-            {
-                return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
-                               (int)gfmultby02(gfmultby02(b)) ^
-                               (int)(b));
-            }
-
-            private static byte gfmultby0e(byte b)
-            {
-                return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
-                               (int)gfmultby02(gfmultby02(b)) ^
-                               (int)gfmultby02(b));
-            }
-
-            
-
-            private byte[] SubWord(byte[] word)
-            {
-                byte[] result = new byte[4];
-                result[0] = this.Sbox[word[0] >> 4, word[0] & 0x0f];
-                result[1] = this.Sbox[word[1] >> 4, word[1] & 0x0f];
-                result[2] = this.Sbox[word[2] >> 4, word[2] & 0x0f];
-                result[3] = this.Sbox[word[3] >> 4, word[3] & 0x0f];
-                return result;
-            }
-
-            private byte[] RotWord(byte[] word)
-            {
-                byte[] result = new byte[4];
-                result[0] = word[1];
-                result[1] = word[2];
-                result[2] = word[3];
-                result[3] = word[0];
-                return result;
-            }
-
-          
-
-            public string DumpKey()
-            {
-                string s = "";
-                for (int i = 0; i < key.Length; ++i)
-                    s += key[i].ToString("x2") + " ";
-                return s;
-            }
-
-            public string DumpTwoByTwo(byte[,] a)
-            {
-                string s = "";
-                for (int r = 0; r < a.GetLength(0); ++r)
+                for (int c = 0; c < 4; ++c)
                 {
-                    s += "[" + r + "]" + " ";
-                    for (int c = 0; c < a.GetLength(1); ++c)
-                    {
-                        s += a[r, c].ToString("x2") + " ";
-                    }
-                    s += "\n";
+                    this.State[r, c] = this.iSbox[(this.State[r, c] >> 4), (this.State[r, c] & 0x0f)];
                 }
-                return s;
+            }
+        }  // InvSubBytes
+
+        private void ShiftRows()
+        {
+            byte[,] temp = new byte[4, 4];
+            for (int r = 0; r < 4; ++r)  // copy State into temp[]
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    temp[r, c] = this.State[r, c];
+                }
             }
 
-        }  // class Aes
-   // }  // namespace AesLib
+            for (int r = 1; r < 4; ++r)  // shift temp into State
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    this.State[r, c] = temp[r, (c + r) % Nb];
+                }
+            }
+        }  // ShiftRows()
+
+        private void InvShiftRows()
+        {
+            byte[,] temp = new byte[4, 4];
+            for (int r = 0; r < 4; ++r)  // copy State into temp[]
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    temp[r, c] = this.State[r, c];
+                }
+            }
+            for (int r = 1; r < 4; ++r)  // shift temp into State
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    this.State[r, (c + r) % Nb] = temp[r, c];
+                }
+            }
+        }  // InvShiftRows()
+
+        private void MixColumns()
+        {
+            byte[,] temp = new byte[4, 4];
+            for (int r = 0; r < 4; ++r)  // copy State into temp[]
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    temp[r, c] = this.State[r, c];
+                }
+            }
+
+            for (int c = 0; c < 4; ++c)
+            {
+                this.State[0, c] = (byte)((int)gfmultby02(temp[0, c]) ^ (int)gfmultby03(temp[1, c]) ^
+                                           (int)gfmultby01(temp[2, c]) ^ (int)gfmultby01(temp[3, c]));
+                this.State[1, c] = (byte)((int)gfmultby01(temp[0, c]) ^ (int)gfmultby02(temp[1, c]) ^
+                                           (int)gfmultby03(temp[2, c]) ^ (int)gfmultby01(temp[3, c]));
+                this.State[2, c] = (byte)((int)gfmultby01(temp[0, c]) ^ (int)gfmultby01(temp[1, c]) ^
+                                           (int)gfmultby02(temp[2, c]) ^ (int)gfmultby03(temp[3, c]));
+                this.State[3, c] = (byte)((int)gfmultby03(temp[0, c]) ^ (int)gfmultby01(temp[1, c]) ^
+                                           (int)gfmultby01(temp[2, c]) ^ (int)gfmultby02(temp[3, c]));
+            }
+        }  // MixColumns
+
+        private void InvMixColumns()
+        {
+            byte[,] temp = new byte[4, 4];
+            for (int r = 0; r < 4; ++r)  // copy State into temp[]
+            {
+                for (int c = 0; c < 4; ++c)
+                {
+                    temp[r, c] = this.State[r, c];
+                }
+            }
+
+            for (int c = 0; c < 4; ++c)
+            {
+                this.State[0, c] = (byte)((int)gfmultby0e(temp[0, c]) ^ (int)gfmultby0b(temp[1, c]) ^
+                                           (int)gfmultby0d(temp[2, c]) ^ (int)gfmultby09(temp[3, c]));
+                this.State[1, c] = (byte)((int)gfmultby09(temp[0, c]) ^ (int)gfmultby0e(temp[1, c]) ^
+                                           (int)gfmultby0b(temp[2, c]) ^ (int)gfmultby0d(temp[3, c]));
+                this.State[2, c] = (byte)((int)gfmultby0d(temp[0, c]) ^ (int)gfmultby09(temp[1, c]) ^
+                                           (int)gfmultby0e(temp[2, c]) ^ (int)gfmultby0b(temp[3, c]));
+                this.State[3, c] = (byte)((int)gfmultby0b(temp[0, c]) ^ (int)gfmultby0d(temp[1, c]) ^
+                                           (int)gfmultby09(temp[2, c]) ^ (int)gfmultby0e(temp[3, c]));
+            }
+        }  // InvMixColumns
+
+        private static byte gfmultby01(byte b)
+        {
+            return b;
+        }
+
+        private static byte gfmultby02(byte b)
+        {
+            if (b < 0x80)
+                return (byte)(int)(b << 1);
+            else
+                return (byte)((int)(b << 1) ^ (int)(0x1b));
+        }
+
+        private static byte gfmultby03(byte b)
+        {
+            return (byte)((int)gfmultby02(b) ^ (int)b);
+        }
+
+        private static byte gfmultby09(byte b)
+        {
+            return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
+                           (int)b);
+        }
+
+        private static byte gfmultby0b(byte b)
+        {
+            return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
+                           (int)gfmultby02(b) ^
+                           (int)b);
+        }
+
+        private static byte gfmultby0d(byte b)
+        {
+            return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
+                           (int)gfmultby02(gfmultby02(b)) ^
+                           (int)(b));
+        }
+
+        private static byte gfmultby0e(byte b)
+        {
+            return (byte)((int)gfmultby02(gfmultby02(gfmultby02(b))) ^
+                           (int)gfmultby02(gfmultby02(b)) ^
+                           (int)gfmultby02(b));
+        }
+
+
+
+        private byte[] SubWord(byte[] word)
+        {
+            byte[] result = new byte[4];
+            result[0] = this.Sbox[word[0] >> 4, word[0] & 0x0f];
+            result[1] = this.Sbox[word[1] >> 4, word[1] & 0x0f];
+            result[2] = this.Sbox[word[2] >> 4, word[2] & 0x0f];
+            result[3] = this.Sbox[word[3] >> 4, word[3] & 0x0f];
+            return result;
+        }
+
+        private byte[] RotWord(byte[] word)
+        {
+            byte[] result = new byte[4];
+            result[0] = word[1];
+            result[1] = word[2];
+            result[2] = word[3];
+            result[3] = word[0];
+            return result;
+        }
+
+
+
+        public string DumpKey()
+        {
+            string s = "";
+            for (int i = 0; i < key.Length; ++i)
+                s += key[i].ToString("x2") + " ";
+            return s;
+        }
+
+        public string DumpTwoByTwo(byte[,] a)
+        {
+            string s = "";
+            for (int r = 0; r < a.GetLength(0); ++r)
+            {
+                s += "[" + r + "]" + " ";
+                for (int c = 0; c < a.GetLength(1); ++c)
+                {
+                    s += a[r, c].ToString("x2") + " ";
+                }
+                s += "\n";
+            }
+            return s;
+        }
+
+    }  // class Aes
+       // }  // namespace AesLib
     public class AES : CryptographicTechnique
     {
-        
+
         public override string Decrypt(string cipherText, string key)
         {
             //throw new NotImplementedException();
-           
+
 
             return "0";
+        }
+
+
+        public static byte[] StringToByteArray(string hex)
+        {
+            return Enumerable.Range(0, hex.Length / 2).Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16)).ToArray();
         }
 
         public override string Encrypt(string plainText, string key)
@@ -395,12 +401,12 @@ namespace SecurityLibrary.AES
             byte[] key2 = new byte[16];
             byte[] output = new byte[16];
 
-            plainText2 = System.Text.Encoding.Unicode.GetBytes(plainText.Substring(2, 2));
-            key2 = System.Text.Encoding.Unicode.GetBytes(key.Substring(2, 2));
+            plainText2 = StringToByteArray(plainText.Substring(2, plainText.Length - 2));
+            key2 = StringToByteArray(key.Substring(2, key.Length - 2));
             Aes_help a = new Aes_help();
-            a.Cipher(plainText2,output, key2);
+            a.Cipher(plainText2, output, key2);
             string out_final = System.Text.Encoding.Unicode.GetString(output);
-            return "0x" + out_final ;
+            return "0x" + out_final;
         }
     }
 }
