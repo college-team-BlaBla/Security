@@ -4,7 +4,7 @@ using SecurityLibrary.AES;
 
 namespace SecurityPackageTest
 {
-    [Ignore]
+
     [TestClass]
     public class ExtendedEuclidTest
     {
